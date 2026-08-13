@@ -1,0 +1,64 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Pedine Bianche (no pedoni)
+scacchi = {'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔'} 
+
+class GraphicViewer:
+    def __init__(self, size=8):
+        self.size = size
+
+    def board(self, asse):  # Impostiamo la griglia e le coordinate
+        griglia = np.zeros((self.size, self.size))
+        griglia[::2, 1::2] = 1
+        griglia[1::2, ::2] = 1
+        
+        # Corretto: 'alpha' (singolare)
+        asse.imshow(griglia, cmap='Oranges', alpha=0.3)
+        
+        # Corretto: variabili coerenti e nomi metodi Matplotlib giusti
+        cols = ['A','B','C','D','E','F','G','H'] 
+        rows = ['8','7','6','5','4','3','2','1'] 
+        
+        asse.set_xticks(np.arange(self.size))
+        asse.set_xticklabels(cols, fontsize=11, fontweight='bold')
+        
+        asse.set_yticks(np.arange(self.size))
+        asse.set_yticklabels(rows, fontsize=11, fontweight='bold')
+        
+        asse.tick_params(left=False, bottom=False)
+
+    def posizionamento(self, board_matrix, title='Posizionamento'):
+        figura, asse = plt.subplots(figsize=(6, 6))
+        self.board(asse)
+        
+        for r in range(self.size):
+            for c in range(self.size):
+                piece = board_matrix[r][c]
+                symbol = scacchi.get(piece, '')
+                if symbol:
+                    # Corretto: usa 'asse' anziché 'ax'
+                    asse.text(c, r, symbol, fontsize=28, ha='center', va='center', 
+                              color='darkblue', fontweight='bold')
+        
+        # Corretta l'indentazione: queste righe devono stare DENTRO il metodo
+        plt.title(title, fontsize=13, pad=10, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
+
+        # Creiamo una scacchiera vuota 8x8
+matrice_test = [['.' for _ in range(8)] for _ in range(8)]
+
+# Posizioniamo alcuni pezzi sulla prima riga (indice 7 in Python, riga '1' degli scacchi)
+matrice_test[7][0] = 'R'  # Torre in A1
+matrice_test[7][1] = 'N'  # Cavallo in B1
+matrice_test[7][2] = 'B'  # Alfiere in C1
+matrice_test[7][3] = 'Q'  # Regina in D1
+matrice_test[7][4] = 'K'  # Re in E1
+matrice_test[7][5] = 'B'
+matrice_test[7][6] = 'N'
+matrice_test[7][7] = 'R'
+
+
+viewer = GraphicViewer(size=8)
+viewer.posizionamento(matrice_test, title="Test Schieramento Iniziale")
