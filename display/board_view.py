@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Pedine Bianche (no pedoni)
-scacchi = {'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔'} 
+scacchi = {'C': '♘', 'A': '♗', 'T': '♖', 'Q': '♕', 'K': '♔'} 
 
 class GraphicViewer:
     def __init__(self, size=8):
@@ -45,20 +45,3 @@ class GraphicViewer:
         plt.title(title, fontsize=13, pad=10, fontweight='bold')
         plt.tight_layout()
         plt.show()
-
-        # Creiamo una scacchiera vuota 8x8
-matrice_test = [['.' for _ in range(8)] for _ in range(8)]
-
-# Posizioniamo alcuni pezzi sulla prima riga (indice 7 in Python, riga '1' degli scacchi)
-matrice_test[7][0] = 'R'  # Torre in A1
-matrice_test[7][1] = 'N'  # Cavallo in B1
-matrice_test[7][2] = 'B'  # Alfiere in C1
-matrice_test[7][3] = 'Q'  # Regina in D1
-matrice_test[7][4] = 'K'  # Re in E1
-matrice_test[7][5] = 'B'
-matrice_test[7][6] = 'N'
-matrice_test[7][7] = 'R'
-
-
-viewer = GraphicViewer(size=8)
-viewer.posizionamento(matrice_test, title="Test Schieramento Iniziale")

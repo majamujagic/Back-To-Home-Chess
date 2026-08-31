@@ -1,6 +1,6 @@
 # Questo file contiene le regole matematiche geometriche
 
-pezzi = ['K', 'Q', 'R', 'B', 'N'] 
+pezzi = ['K', 'Q', 'T', 'A', 'C'] 
 stato_iniziale = [
     ['.', '.', '.', '.', '.', '.', '.', '.'],
     ['.', '.', '.', '.', '.', '.', '.', '.'],
@@ -9,7 +9,7 @@ stato_iniziale = [
     ['.', '.', '.', '.', '.', '.', '.', '.'],
     ['.', '.', '.', '.', '.', '.', '.', '.'],
     ['.', '.', '.', '.', '.', '.', '.', '.'],
-    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+    ['T', 'C', 'A', 'Q', 'K', 'A', 'C', 'T']
 ] 
 
 from typing import List, Tuple 
