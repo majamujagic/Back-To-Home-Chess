@@ -1,5 +1,3 @@
-# Questo file contiene le regole matematiche geometriche
-
 pezzi = ['K', 'Q', 'T', 'A', 'C'] 
 stato_iniziale = [
     ['.', '.', '.', '.', '.', '.', '.', '.'],
@@ -11,19 +9,17 @@ stato_iniziale = [
     ['.', '.', '.', '.', '.', '.', '.', '.'],
     ['T', 'C', 'A', 'Q', 'K', 'A', 'C', 'T']
 ] 
-
-from typing import List, Tuple 
 # Converte la stringa leggibile degli scacchi nella tupla di indici 
-def stringa_tupla(stringa: str) -> Tuple[int, int]:
+def stringa_tupla(stringa: str) -> tuple[int, int]:
     col_id = stringa[0].upper()
     row_id = stringa[1]
-    col = ord(col_id) - ord("A")
+    col = ord(col_id) - ord('A')
     row = 8 - int(row_id)
     return row, col
 
 # Converte la tupla di indici in coordinate per gli scacchi 
 def tupla_stringa(r: int, c: int) -> str:
-    col_char = chr(ord("A") + c)
+    col_char = chr(ord('A') + c)
     row_char = str(8-r)
     return f"{col_char}{row_char}"
 
@@ -85,3 +81,44 @@ def intersezioni(c_start: tuple[int,int], c_end: tuple[int,int]) -> list[tuple[i
         current_c += step_c 
     return intermedio
 
+import copy
+import random
+
+def genera_mosse_casuali(stato_base: list[list[str]], num_mosse: int) -> list[list[list[str]]]:
+    cronologia = [copy.deepcopy(stato_base)] # Conterrà tutti gli dtsti temporali partendo da t = 0
+    stato_corrente = copy.deepcopy(stato_base) # Matrice su cui applichiamo gli spostaenti passo dopo passo 
+    # copy.deepcopy crea copie indipendenti in memoria della scacchiera iniziale 
+
+    for _ in range(num_mosse): # Avvia un ciclo che tenta di eseguire K mosse
+        mosse_disponibili = [] # Inizializza una lista vuota che ad ogni turno raccoglie tutte le mosse legali possibili tra tutti i pezzi presenti
+        for r in range(8):
+            for c in range(8): 
+                pezzo = stato_corrente[r][c] 
+                if pezzo != ".": # Se la casella non è vuota prendiamo la pedina in questione e la sua posizione
+                    candidati = mosse_pedine(pezzo, r, c) # E verifiachiamo tutte le mosse fattibile da questa
+                    for nr, nc in candidati: # cicla su ogni potenziale casella d'arrivo 
+                        if stato_corrente[nr][nc] == ".": # E se è libera 
+                            inter = intersezioni((r, c), (nr, nc)) # Calcola l'elenco delle caselle attraversate dal pezzo per adndare da r,c a nr, nc
+                            traiettoria_libera = all(stato_corrente[ir][ic] == "." for ir, ic in inter) # Verifica che tutte le caselle nella sua ipotetica traiettoria siano libere se no ritorna False 
+                            if traiettoria_libera: # Se la traiettoria è libera
+                                mosse_disponibili.append(((r, c), (nr, nc))) # Aggiunge alla lista delle mosse_disponibili la coppia
+        if not mosse_disponibili: # Controllo: se nessun pezzo ha mosse legali disponibili si fa un break 
+            break
+        (src_r, src_c), (dst_r, dst_c) = random.choice(mosse_disponibili) # Esrtrae casualmente un mossa tra tutte quelle valide trovate 
+        pezzo_mosso = stato_corrente[src_r][src_c] # Salva nella lista l'identificare del pezzo che si trova nella casella di partenza
+        stato_corrente[src_r][src_c] = "." # Svuota la casella di partenza
+        stato_corrente[dst_r][dst_c] = pezzo_mosso # Scrive il pezzo nella nuova casella di destinazione 
+        cronologia.append(copy.deepcopy(stato_corrente))
+    return cronologia
+
+def estrai_coordinate(stato: list[list[str]]) -> dict[str, list[tuple[int,int]]]:
+    posizioni = {}
+    for r in range(8):
+        for c in range(8):
+            pezzo = stato[r][c]
+            if pezzo != '.':
+                if pezzo not in posizioni:
+                    posizioni[pezzo] = []
+                posizioni[pezzo].append((r,c))
+    return posizioni
+    
