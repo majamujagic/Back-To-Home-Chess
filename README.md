@@ -34,5 +34,7 @@ Assicurasi di avere Python installato sul computer. Dopodiché aprire il termina
 ```bash
 pip install z3-solver matplotlib numpy
 ```
-Dopodichè puoi avviare il programma eseguendo lo script principale: python main.py
-
+Dopodichè puoi avviare il programma eseguendo lo script principale: 
+```bash
+python main.py
+```
