@@ -5,7 +5,8 @@ Il programma gestisce le regole di movimento dei vari pezzi, evita le collisioni
 
 ## Obiettivo del progetto
 
-Nel Model Checking, un sistema viene modellato come uno spazio degli stati e una relazione di transizione. In questo contesto:
+L'obiettivo centrale del progetto è applicare la logica proposizionale e la soddisfacibilità (SAT) per risolvere un problema di pianificazione e ricerca del percorso.
+Per fare ciò ci avvaliamo del solver Z3 come motore di ragionamento logico, traducendo il problema nei seguenti concetti:
 * **Stato:** La disposizione dei pezzi sulla scacchiera in un dato istante $T$.
 * **Transizione:** Una mossa legale rispettando le regole degli scacchi.
 * **Quesito Formale:** Data una posizione finale $S_T$, il **SAT Solver** deve verificare la soddisfacibilità di una formula in **Forma Normale Congiuntiva (CNF)** che codifica l'esistenza di una sequenza di transizioni $S_0 \rightarrow S_1 \rightarrow \dots \rightarrow S_T$ valida.
