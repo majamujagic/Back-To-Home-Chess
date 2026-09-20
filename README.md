@@ -10,6 +10,7 @@ Per fare ciò ci avvaliamo del solver Z3 come motore di ragionamento logico, tra
 * **Stato:** La disposizione dei pezzi sulla scacchiera in un dato istante $T$.
 * **Transizione:** Una mossa legale rispettando le regole degli scacchi.
 * **Quesito Formale:** Data una posizione finale $S_T$, il **SAT Solver** deve verificare la soddisfacibilità di una formula in **Forma Normale Congiuntiva (CNF)** che codifica l'esistenza di una sequenza di transizioni $S_0 \rightarrow S_1 \rightarrow \dots \rightarrow S_T$ valida.
+Z3 ci permette di analizzare simultaneamente tutte le condizioni e i vincoli imposti per trovare matematicamente l'assegnazione che soddisfa l'intera formula, garantendo la correttezza del percorso di ritorno.
 
 ## Struttura del codice
 
@@ -22,4 +23,16 @@ Il progetto è strutturato in diversi file nella cartella principale:
 │   ├── solver.py          # Configurazione dei vincoli e risoluzione del percorso con Z3
 │   ├── main.py            # Script principale che coordina l'esecuzione del programma
 │   └── README.md          # Documentazione del progetto
+```
+## Istruzioni e Installazione
+### Librerie utilizzate:
+* **Z3-solver**: Motore logico per la risoluzione dei problemi di soddisfacibilità (SMT/SAT).
+* **Matplotlib**: Per la generazione della grafica e delle animazioni della scacchiera.
+* **NumPy**: Per la gestione della matrice della scacchiera.
+### Installazione
+Assicurasi di avere Python installato sul computer. Dopodiché aprire il terminale all'interno della cartella del progetto e installare le librerie necessarie con il comando:
+```bash
+pip install z3-solver matplotlib numpy
+```
+Dopodichè puoi avviare il programma eseguendo lo script principale: python main.py
 
