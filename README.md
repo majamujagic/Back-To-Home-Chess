@@ -2,6 +2,7 @@
 
 Questo progetto, basato sul gioco degli scacchi, ci permette di prendere una scacchiera con un numero limitato di pedine, mescolare i pezzi con mosse casuali per poi utilizzare un **SAT Solver (Z3)** per calcolare la strada esatta che permette a tutte le pedine di tornare alla loro posizione iniziale senza scontrarsi.
 Il programma gestisce le regole di movimento dei vari pezzi, evita le collisioni lungo le strade e mostra l'intero processo visivamente tramite un'animazione grafica con Matplotlib.
+
 Progetto sviluppato da Mujagic Maja per il corso di Computabilià, Complessità e Logica - Università degli Studi di Trieste
 
 ## Obiettivo del progetto
