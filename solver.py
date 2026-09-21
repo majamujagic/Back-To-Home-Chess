@@ -46,16 +46,16 @@ def impostazione_x_soluzione(stato_finale_z):
 def soluzione_z3(id_pezzi, partenza, arrivo, t_max = 10):
     inst_list = [item[0] for item in id_pezzi]
     pezzi_immobili = {inst for inst in inst_list if partenza[inst] == arrivo[inst]}
-    pezzi_mobili = [inst for inst in inst_list if inst not in pezzi_immobili]
-
     for T in range(1, t_max + 1):
         print(f'Tentativo di risoluzione con T = {T}...')
         s = Solver()
-        pos = {}
+        pos = {} # Variabili di posizione
+        # Impostiamo le variabili 
         for inst, _ in id_pezzi:
             for t in range(T + 1):
                 pos[(inst, t, 'r')] = Int(f'{inst}_t{t}_r')
                 pos[(inst, t, 'c')] = Int(f'{inst}_t{t}_c')
+        # Assegnazione delle variabili
         for inst, _ in id_pezzi:
             r_init, c_init = partenza[inst]
             r_end, c_end = arrivo[inst]
@@ -63,12 +63,13 @@ def soluzione_z3(id_pezzi, partenza, arrivo, t_max = 10):
             s.add(pos[(inst, 0, 'c')] == c_init)
             s.add(pos[(inst, T, 'r')] == r_end)
             s.add(pos[(inst, T, 'c')] == c_end)
+            # Vincolo sui pezzi immobili
             if inst in pezzi_immobili:
                 for t in range(T + 1):
                     s.add(pos[(inst, t, 'r')] == r_init)
                     s.add(pos[(inst, t, 'c')] == c_init)
-
         for t in range(T):
+            # Controllo che in t e in t+1 i pezzi rimangano nella scacchiera
             for inst, _ in id_pezzi:
                 r = pos[(inst, t, 'r')]
                 c = pos[(inst, t, 'c')]
@@ -76,6 +77,7 @@ def soluzione_z3(id_pezzi, partenza, arrivo, t_max = 10):
                 r_next = pos[(inst, t + 1, 'r')]
                 c_next = pos[(inst, t + 1, 'c')]
                 s.add(And(r_next >= 0, r_next < 8, c_next >= 0, c_next < 8))
+            # Controllo che in t ein t+1 non ci siano sovrapposizioni     
             for i in range(len(inst_list)):
                 for j in range(i + 1, len(inst_list)):
                     p1 = inst_list[i]
@@ -83,13 +85,14 @@ def soluzione_z3(id_pezzi, partenza, arrivo, t_max = 10):
                     s.add(Or(pos[(p1, t, 'r')] != pos[(p2, t, 'r')], pos[(p1, t, 'c')] != pos[(p2, t, 'c')]))
                     s.add(Or(pos[(p1, t + 1, 'r')] != pos[(p2, t + 1, 'r')], pos[(p1, t + 1, 'c')] != pos[(p2, t + 1, 'c')]))
             for inst, p_type in id_pezzi:
-                if inst in pezzi_immobili:
+                if inst in pezzi_immobili: 
                     continue  
                 r_curr = pos[(inst, t, 'r')]
                 c_curr = pos[(inst, t, 'c')]
                 r_next = pos[(inst, t + 1, 'r')]
                 c_next = pos[(inst, t + 1, 'c')]
                 condizioni_mossa = []
+                # Questo ci permette di dare lopzione di immoblità alla pedina
                 condizioni_mossa.append(And(r_next == r_curr, c_next == c_curr))
                 for r_val in range(8):
                     for c_val in range(8):
@@ -100,26 +103,27 @@ def soluzione_z3(id_pezzi, partenza, arrivo, t_max = 10):
                             if not inter:
                                 condizioni_mossa.append(And(base_pos_cond, r_next == nr, c_next == nc))
                             else:
-                                inter_clauses = []
+                                inter_celle = []
                                 for ir, ic in inter:
-                                    cel_libera_checks = []
-                                    for alt_inst, _ in id_pezzi:
-                                        if alt_inst != inst:
-                                            cel_libera_checks.append(
-                                                Or(pos[(alt_inst, t, 'r')] != ir, pos[(alt_inst, t, 'c')] != ic))
-                                    if cel_libera_checks:
-                                        inter_clauses.append(And(*cel_libera_checks))
-                                if inter_clauses:
-                                    condizioni_mossa.append(And(base_pos_cond, r_next == nr, c_next == nc, And(*inter_clauses)))
+                                    cella_libera = []
+                                    for altro_pezzo, _ in id_pezzi:
+                                        if altro_pezzo != inst:
+                                            # Imponiamo che la casella non sia occupata
+                                            cella_libera.append(Or(pos[(altro_pezzo, t, 'r')] != ir, pos[(altro_pezzo, t, 'c')] != ic))
+                                    if cella_libera:
+                                        # Passiamo gli argomenti di cella_libera come argomenti separati And
+                                        inter_celle.append(And(*cella_libera))
+                                if inter_celle:
+                                    condizioni_mossa.append(And(base_pos_cond, r_next == nr, c_next == nc, And(*inter_celle)))
                                 else:
                                     condizioni_mossa.append(And(base_pos_cond, r_next == nr, c_next == nc))
                 
                 if condizioni_mossa:
                     s.add(Or(condizioni_mossa))
                     
-        if s.check() == sat:
+        if s.check() == sat: # Controlliamo se esiste una soluzione: sat o unsat
             modello = s.model()
-            print(f'Soluzione trovata con successo in T = {T} passi!\n')
+            print(f'Soluzione trovata con successo in T = {T} passi!')
             risultato_passi = {}
             for inst, _ in id_pezzi:
                 percorso_pezzo = []
@@ -130,5 +134,5 @@ def soluzione_z3(id_pezzi, partenza, arrivo, t_max = 10):
                 risultato_passi[inst] = percorso_pezzo
             return risultato_passi
 
-    print("Nessuna soluzione trovata entro l'orizzonte massimo.")
+    print("Nessuna soluzione trovata: UNSAT")
     return None
