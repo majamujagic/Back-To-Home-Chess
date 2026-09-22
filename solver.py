@@ -1,139 +1,168 @@
-from z3 import *
+from z3 import (Solver,Bool,And,Or,Not,Sum,If,is_true,sat)
 from chess_matrix import intersezioni, mosse_pedine, stato_iniziale, estrai_coordinate
 
 def impostazione_x_soluzione(stato_finale_z):
-    posizioni_target = {} 
+    posizioni_target = {}
     for r in range(8):
         for c in range(8):
-            p = stato_iniziale[r][c]
-            if p != '.':
-                if p not in posizioni_target:
-                   posizioni_target[p] = []
-                posizioni_target[p].append((r,c))
-                
-    start_pedina = estrai_coordinate(stato_finale_z) 
-    id_pezzi = [] 
-    partenza = {} 
-    arrivo = {} 
+            tipo_pezzo = stato_iniziale[r][c]
+            if tipo_pezzo != '.':
+                if tipo_pezzo not in posizioni_target:
+                    posizioni_target[tipo_pezzo] = []
+                posizioni_target[tipo_pezzo].append((r, c))
 
-    for nome_pezzo, starts in start_pedina.items():
-        targets = list(posizioni_target[nome_pezzo])
+    posizioni_partenza = estrai_coordinate(stato_finale_z)
+    id_pezzi = []
+    partenza = {}
+    arrivo = {}
+
+    for tipo_pezzo, posizioni in posizioni_partenza.items():
+        targets = list(posizioni_target[tipo_pezzo])
         targets_disponibili = list(targets)
         pezzi_da_assegnare = []
-        for c_partenza in starts:
-            if c_partenza in targets_disponibili:
-                targets_disponibili.remove(c_partenza)
-                istanza_id = f'{nome_pezzo}_{len(id_pezzi)}'
-                id_pezzi.append((istanza_id, nome_pezzo))
-                partenza[istanza_id] = c_partenza
-                arrivo[istanza_id] = c_partenza  
+        for posizione_partenza in posizioni:
+            if posizione_partenza in targets_disponibili:
+                targets_disponibili.remove(posizione_partenza)
+                identificatore = f'{tipo_pezzo}_{len(id_pezzi)}'
+                id_pezzi.append((identificatore, tipo_pezzo))
+                partenza[identificatore] = posizione_partenza
+                arrivo[identificatore] = posizione_partenza
             else:
-                pezzi_da_assegnare.append(c_partenza)
-                
-        for c_partenza in pezzi_da_assegnare:
+                pezzi_da_assegnare.append(posizione_partenza)
+
+        for posizione_partenza in pezzi_da_assegnare:
             if targets_disponibili:
-                best_t = min(targets_disponibili, key=lambda t: abs(t[0] - c_partenza[0]) + abs(t[1] - c_partenza[1]))
-                targets_disponibili.remove(best_t)
+                target_migliore = min(targets_disponibili,key=lambda target: (abs(target[0] - posizione_partenza[0])+ abs(target[1] - posizione_partenza[1])))
+                targets_disponibili.remove(target_migliore)
             else:
-                best_t = targets[0] 
-            istanza_id = f'{nome_pezzo}_{len(id_pezzi)}'
-            id_pezzi.append((istanza_id, nome_pezzo))
-            partenza[istanza_id] = c_partenza
-            arrivo[istanza_id] = best_t
-            
+                target_migliore = targets[0]
+
+            identificatore = f'{tipo_pezzo}_{len(id_pezzi)}'
+            id_pezzi.append((identificatore, tipo_pezzo))
+            partenza[identificatore] = posizione_partenza
+            arrivo[identificatore] = target_migliore
     return id_pezzi, partenza, arrivo
 
-def soluzione_z3(id_pezzi, partenza, arrivo, t_max = 10):
-    inst_list = [item[0] for item in id_pezzi]
-    pezzi_immobili = {inst for inst in inst_list if partenza[inst] == arrivo[inst]}
+def crea_variabili_booleani(id_pezzi, T):
+    x = {}
+    for identificatore, _ in id_pezzi:
+        for t in range(T + 1):
+            for r in range(8):
+                for c in range(8):
+                    nome = (f'{identificatore}_t{t}_r{r}_c{c}')
+                    x[(identificatore, t, r, c)] = Bool(nome)
+    return x
+
+def aggiungi_almeno_una_posizione(solver, x, id_pezzi, T):
+    for identificatore, _ in id_pezzi:
+        for t in range(T + 1):
+            possibili_posizioni = []
+            for r in range(8):
+                for c in range(8):
+                    possibili_posizioni.append(x[(identificatore, t, r, c)])
+            solver.add(Or(possibili_posizioni))
+
+def aggiungi_al_massimo_una_posizione(solver, x, id_pezzi, T):
+    caselle = [(r, c) for r in range(8) for c in range(8)]
+    for identificatore, _ in id_pezzi:
+        for t in range(T + 1):
+            for i in range(len(caselle)):
+                for j in range(i + 1, len(caselle)):
+                    r1, c1 = caselle[i]
+                    r2, c2 = caselle[j]
+                    solver.add(Or(Not(x[(identificatore, t, r1, c1)]), Not(x[(identificatore, t, r2, c2)])))
+
+def aggiungi_vincoli_inizio_fine(solver, x, id_pezzi, partenza, arrivo,T):
+    for identificatore, _ in id_pezzi:
+        r_init, c_init = partenza[identificatore]
+        r_end, c_end = arrivo[identificatore]
+        solver.add(x[(identificatore, 0, r_init, c_init)])
+        solver.add(x[(identificatore, T, r_end, c_end)])
+
+def aggiungi_pezzi_immobili(solver,x,id_pezzi,partenza,arrivo,T):
+    for identificatore, _ in id_pezzi:
+        if partenza[identificatore] != arrivo[identificatore]:
+            continue
+        r, c = partenza[identificatore]
+        for t in range(T + 1):
+            solver.add(x[(identificatore, t, r, c)])
+
+def aggiungi_vincoli_non_collisione(solver, x, id_pezzi, T):
+    for t in range(T + 1):
+        for r in range(8):
+            for c in range(8):
+                for i in range(len(id_pezzi)):
+                    for j in range(i + 1, len(id_pezzi)):
+                        pezzo_1 = id_pezzi[i][0]
+                        pezzo_2 = id_pezzi[j][0]
+                        solver.add(Or(Not(x[(pezzo_1, t, r, c)]),Not(x[(pezzo_2, t, r, c)])))
+
+def aggiungi_vincoli_mosse(solver, x, id_pezzi, partenza, arrivo, T):
+    for t in range(T):
+        for identificatore, tipo_pezzo in id_pezzi:
+            if partenza[identificatore] == arrivo[identificatore]:
+                continue
+            condizioni_mossa = []
+            for r_val in range(8):
+                for c_val in range(8):
+                    posizione_corrente = x[(identificatore, t, r_val, c_val)]
+                    posizione_successiva = x[(identificatore, t + 1, r_val, c_val)]
+                    condizioni_mossa.append(And(posizione_corrente, posizione_successiva))
+                    mosse = mosse_pedine(tipo_pezzo, r_val, c_val)
+                    for nr, nc in mosse:
+                        celle_intermedie = intersezioni((r_val, c_val),(nr, nc))
+                        condizioni_celle_libere = []
+                        for ir, ic in celle_intermedie:
+                            condizioni_altri_pezzi = []
+                            for altro_pezzo, _ in id_pezzi:
+                                if altro_pezzo == identificatore:
+                                    continue
+                                condizioni_altri_pezzi.append(Not(x[(altro_pezzo, t, ir, ic)]))
+                            if condizioni_altri_pezzi:
+                                condizioni_celle_libere.append(And(condizioni_altri_pezzi))
+                        posizione_successiva = x[(identificatore, t+1, nr, nc)]
+                        if condizioni_celle_libere:
+                            condizioni_mossa.append(
+                                And(posizione_corrente, posizione_successiva, And(*condizioni_celle_libere)))
+                        else:
+                            condizioni_mossa.append(
+                                And(posizione_corrente, posizione_successiva))
+            solver.add(Or(condizioni_mossa))
+
+def estrai_percorso_dal_modello(modello, x, id_pezzi, T):
+    risultato_passi = {}
+    for identificatore, _ in id_pezzi:
+        percorso_pezzo = []
+        for t in range(T + 1):
+            posizione_trovata = None
+            for r in range(8):
+                for c in range(8):
+                    variabile = x[(identificatore, t, r, c)]
+                    valore = modello.evaluate(variabile, model_completion=True)
+                    if is_true(valore):
+                        posizione_trovata = (r, c)
+                        break
+                if posizione_trovata is not None:
+                    break
+            percorso_pezzo.append(posizione_trovata)
+        risultato_passi[identificatore] = percorso_pezzo
+    return risultato_passi
+
+
+def soluzione_z3(id_pezzi, partenza, arrivo, t_max=10):
     for T in range(1, t_max + 1):
         print(f'Tentativo di risoluzione con T = {T}...')
-        s = Solver()
-        pos = {} # Variabili di posizione
-        # Impostiamo le variabili (1)
-        for inst, _ in id_pezzi:
-            for t in range(T + 1):
-                pos[(inst, t, 'r')] = Int(f'{inst}_t{t}_r')
-                pos[(inst, t, 'c')] = Int(f'{inst}_t{t}_c')
-        # Assegnazione delle variabili (2)
-        for inst, _ in id_pezzi:
-            r_init, c_init = partenza[inst]
-            r_end, c_end = arrivo[inst]
-            s.add(pos[(inst, 0, 'r')] == r_init)
-            s.add(pos[(inst, 0, 'c')] == c_init)
-            s.add(pos[(inst, T, 'r')] == r_end)
-            s.add(pos[(inst, T, 'c')] == c_end)
-            # Vincolo sui pezzi immobili
-            if inst in pezzi_immobili:
-                for t in range(T + 1):
-                    s.add(pos[(inst, t, 'r')] == r_init)
-                    s.add(pos[(inst, t, 'c')] == c_init)
-        for t in range(T):
-            # Limitazione scacchiera t e in t+1 (3)
-            for inst, _ in id_pezzi:
-                r = pos[(inst, t, 'r')]
-                c = pos[(inst, t, 'c')]
-                s.add(And(r >= 0, r < 8, c >= 0, c < 8))
-                r_next = pos[(inst, t + 1, 'r')]
-                c_next = pos[(inst, t + 1, 'c')]
-                s.add(And(r_next >= 0, r_next < 8, c_next >= 0, c_next < 8))
-            # Controllo che in t e in t+1 non ci siano sovrapposizioni (4)
-            for i in range(len(inst_list)):
-                for j in range(i + 1, len(inst_list)):
-                    p1 = inst_list[i]
-                    p2 = inst_list[j]
-                    s.add(Or(pos[(p1, t, 'r')] != pos[(p2, t, 'r')], pos[(p1, t, 'c')] != pos[(p2, t, 'c')]))
-                    s.add(Or(pos[(p1, t + 1, 'r')] != pos[(p2, t + 1, 'r')], pos[(p1, t + 1, 'c')] != pos[(p2, t + 1, 'c')]))
-            for inst, p_type in id_pezzi: # Creiamo le variabili per le mosse 
-                if inst in pezzi_immobili: 
-                    continue  
-                r_curr = pos[(inst, t, 'r')]
-                c_curr = pos[(inst, t, 'c')]
-                r_next = pos[(inst, t + 1, 'r')]
-                c_next = pos[(inst, t + 1, 'c')]
-                condizioni_mossa = []
-                # Andiamo a determinare i vincoli delle mosse (5)
-                condizioni_mossa.append(And(r_next == r_curr, c_next == c_curr)) # Immobilità pedina
-                for r_val in range(8):
-                    for c_val in range(8):
-                        m_list = mosse_pedine(p_type, r_val, c_val)
-                        posizionne_att = And(r_curr == r_val, c_curr == c_val)
-                        for nr, nc in m_list:
-                            inter = intersezioni((r_val, c_val), (nr, nc)) # (6)
-                            if not inter:
-                                condizioni_mossa.append(And(posizionne_att, r_next == nr, c_next == nc))
-                            else:
-                                inter_celle = []
-                                for ir, ic in inter:
-                                    cella_libera = []
-                                    for altro_pezzo, _ in id_pezzi:
-                                        if altro_pezzo != inst:
-                                            # Imponiamo che la casella non sia occupata
-                                            cella_libera.append(Or(pos[(altro_pezzo, t, 'r')] != ir, pos[(altro_pezzo, t, 'c')] != ic))
-                                    if cella_libera:
-                                        # Passiamo gli argomenti di cella_libera come argomenti separati And
-                                        inter_celle.append(And(*cella_libera))
-                                if inter_celle:
-                                    condizioni_mossa.append(And(posizionne_att, r_next == nr, c_next == nc, And(*inter_celle)))
-                                else:
-                                    condizioni_mossa.append(And(posizionne_att, r_next == nr, c_next == nc))
-                
-                if condizioni_mossa:
-                    s.add(Or(condizioni_mossa))
-
-        if s.check() == sat: # Controlliamo se esiste una soluzione: sat o unsat
-            modello = s.model()
+        solver = Solver()
+        x = crea_variabili_booleani(id_pezzi, T)
+        aggiungi_almeno_una_posizione(solver, x, id_pezzi, T)
+        aggiungi_al_massimo_una_posizione(solver, x, id_pezzi, T)
+        aggiungi_vincoli_inizio_fine(solver, x, id_pezzi, partenza, arrivo, T)
+        aggiungi_pezzi_immobili(solver, x, id_pezzi, partenza, arrivo, T)
+        aggiungi_vincoli_non_collisione(solver, x, id_pezzi, T)
+        aggiungi_vincoli_mosse(solver, x, id_pezzi, partenza, arrivo, T)
+        if solver.check() == sat:
             print(f'Soluzione trovata con successo in T = {T} passi!')
-            print(f'Cosa contiene il modello: {s}')
-            risultato_passi = {}
-            for inst, _ in id_pezzi:
-                percorso_pezzo = []
-                for t in range(T + 1):
-                    rv = modello.evaluate(pos[(inst, t, 'r')]).as_long()
-                    cv = modello.evaluate(pos[(inst, t, 'c')]).as_long()
-                    percorso_pezzo.append((rv, cv))
-                risultato_passi[inst] = percorso_pezzo
-            return risultato_passi
-
-    print("Nessuna soluzione trovata: UNSAT")
+            modello = solver.model()
+            return estrai_percorso_dal_modello(modello, x, id_pezzi, T)
+    print('Nessuna soluzione trovata entro il bound massimo.')
     return None

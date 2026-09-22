@@ -42,7 +42,7 @@ def mosse_pedine(pezzi: str, r: int, c: int) -> list[tuple[int,int]]:
         if pezzi in ['T', 'Q']:
             direzioni.extend([(0, 1), (0, -1), (1, 0), (-1, 0)])
         if pezzi in ['A', 'Q']:
-            direzioni. extend([(1, 1), (-1, 1), (1, -1), (-1, -1)])
+            direzioni.extend([(1, 1), (-1, 1), (1, -1), (-1, -1)])
         for dr, dc in direzioni:
             for passo in range(1,8):
                 nr, nc = r + dr*passo, c + dc*passo
