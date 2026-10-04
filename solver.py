@@ -1,23 +1,22 @@
-from z3 import (Solver,Bool,And,Or,Not,Sum,If,is_true,sat)
+from z3 import (Solver, Bool, And, Or, Not, is_true, sat)
 from chess_matrix import intersezioni, mosse_pedine, stato_iniziale, estrai_coordinate
 
 def impostazione_x_soluzione(stato_finale_z):
-    posizioni_target = {}
+    posizioni_originali = {} 
     for r in range(8):
         for c in range(8):
             tipo_pezzo = stato_iniziale[r][c]
             if tipo_pezzo != '.':
-                if tipo_pezzo not in posizioni_target:
-                    posizioni_target[tipo_pezzo] = []
-                posizioni_target[tipo_pezzo].append((r, c))
-
+                if tipo_pezzo not in posizioni_originali:
+                    posizioni_originali[tipo_pezzo] = []
+                posizioni_originali[tipo_pezzo].append((r, c))
     posizioni_partenza = estrai_coordinate(stato_finale_z)
     id_pezzi = []
     partenza = {}
-    arrivo = {}
+    arrivo = {} 
 
     for tipo_pezzo, posizioni in posizioni_partenza.items():
-        targets = list(posizioni_target[tipo_pezzo])
+        targets = list(posizioni_originali[tipo_pezzo])
         targets_disponibili = list(targets)
         pezzi_da_assegnare = []
         for posizione_partenza in posizioni:
@@ -43,7 +42,9 @@ def impostazione_x_soluzione(stato_finale_z):
             arrivo[identificatore] = target_migliore
     return id_pezzi, partenza, arrivo
 
-def crea_variabili_booleani(id_pezzi, T):
+# Creazione di variabili booleane per ogni pedina, tempo e posizione
+
+def variabili_bool(id_pezzi, T):
     x = {}
     for identificatore, _ in id_pezzi:
         for t in range(T + 1):
@@ -53,7 +54,9 @@ def crea_variabili_booleani(id_pezzi, T):
                     x[(identificatore, t, r, c)] = Bool(nome)
     return x
 
-def aggiungi_almeno_una_posizione(solver, x, id_pezzi, T):
+# VINCOLI
+
+def almeno_una_etichetta(solver, x, id_pezzi, T): 
     for identificatore, _ in id_pezzi:
         for t in range(T + 1):
             possibili_posizioni = []
@@ -62,7 +65,7 @@ def aggiungi_almeno_una_posizione(solver, x, id_pezzi, T):
                     possibili_posizioni.append(x[(identificatore, t, r, c)])
             solver.add(Or(possibili_posizioni))
 
-def aggiungi_al_massimo_una_posizione(solver, x, id_pezzi, T):
+def massimo_una_etichetta(solver, x, id_pezzi, T):
     caselle = [(r, c) for r in range(8) for c in range(8)]
     for identificatore, _ in id_pezzi:
         for t in range(T + 1):
@@ -72,14 +75,15 @@ def aggiungi_al_massimo_una_posizione(solver, x, id_pezzi, T):
                     r2, c2 = caselle[j]
                     solver.add(Or(Not(x[(identificatore, t, r1, c1)]), Not(x[(identificatore, t, r2, c2)])))
 
-def aggiungi_vincoli_inizio_fine(solver, x, id_pezzi, partenza, arrivo,T):
+
+def vincolo_inizio_fine(solver, x, id_pezzi, partenza, arrivo,T):
     for identificatore, _ in id_pezzi:
         r_init, c_init = partenza[identificatore]
         r_end, c_end = arrivo[identificatore]
         solver.add(x[(identificatore, 0, r_init, c_init)])
         solver.add(x[(identificatore, T, r_end, c_end)])
 
-def aggiungi_pezzi_immobili(solver,x,id_pezzi,partenza,arrivo,T):
+def freezing_pezzi(solver,x,id_pezzi,partenza,arrivo,T):
     for identificatore, _ in id_pezzi:
         if partenza[identificatore] != arrivo[identificatore]:
             continue
@@ -87,7 +91,7 @@ def aggiungi_pezzi_immobili(solver,x,id_pezzi,partenza,arrivo,T):
         for t in range(T + 1):
             solver.add(x[(identificatore, t, r, c)])
 
-def aggiungi_vincoli_non_collisione(solver, x, id_pezzi, T):
+def vincolo_non_collisione(solver, x, id_pezzi, T):
     for t in range(T + 1):
         for r in range(8):
             for c in range(8):
@@ -97,7 +101,7 @@ def aggiungi_vincoli_non_collisione(solver, x, id_pezzi, T):
                         pezzo_2 = id_pezzi[j][0]
                         solver.add(Or(Not(x[(pezzo_1, t, r, c)]),Not(x[(pezzo_2, t, r, c)])))
 
-def aggiungi_vincoli_mosse(solver, x, id_pezzi, partenza, arrivo, T):
+def vincoli_mosse(solver, x, id_pezzi, partenza, arrivo, T):
     for t in range(T):
         for identificatore, tipo_pezzo in id_pezzi:
             if partenza[identificatore] == arrivo[identificatore]:
@@ -153,13 +157,13 @@ def soluzione_z3(id_pezzi, partenza, arrivo, t_max=10):
     for T in range(1, t_max + 1):
         print(f'Tentativo di risoluzione con T = {T}...')
         solver = Solver()
-        x = crea_variabili_booleani(id_pezzi, T)
-        aggiungi_almeno_una_posizione(solver, x, id_pezzi, T)
-        aggiungi_al_massimo_una_posizione(solver, x, id_pezzi, T)
-        aggiungi_vincoli_inizio_fine(solver, x, id_pezzi, partenza, arrivo, T)
-        aggiungi_pezzi_immobili(solver, x, id_pezzi, partenza, arrivo, T)
-        aggiungi_vincoli_non_collisione(solver, x, id_pezzi, T)
-        aggiungi_vincoli_mosse(solver, x, id_pezzi, partenza, arrivo, T)
+        x = variabili_bool(id_pezzi, T)
+        almeno_una_etichetta(solver, x, id_pezzi, T)
+        massimo_una_etichetta(solver, x, id_pezzi, T)
+        vincolo_inizio_fine(solver, x, id_pezzi, partenza, arrivo, T)
+        freezing_pezzi(solver, x, id_pezzi, partenza, arrivo, T)
+        vincolo_non_collisione(solver, x, id_pezzi, T)
+        vincoli_mosse(solver, x, id_pezzi, partenza, arrivo, T)
         if solver.check() == sat:
             print(f'Soluzione trovata con successo in T = {T} passi!')
             modello = solver.model()

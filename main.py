@@ -4,7 +4,7 @@ from solver import soluzione_z3, impostazione_x_soluzione
 
 numero_mosse = int(input('Inserire il numero di mosse (MAX: 6): '))
 viewer = GraphicViewer()
-print(f"Generazione di {numero_mosse} mosse casuali ->")
+print(f"Generazione di {numero_mosse} mosse casuali...")
 cronologia = genera_mosse_casuali(stato_iniziale, num_mosse = numero_mosse)
 stato_rimescolato = cronologia[-1]
 configurazione = estrai_coordinate(stato_rimescolato)
@@ -16,7 +16,7 @@ for pezzo, coordinate in configurazione.items():
 print('Avvio animazione su Matplotlib...')
 viewer.visualizzazione_animata(cronologia, delay = 1.5, title_prefix='Posizioni')
 
-print('Avvio del SAT Solver (Z3) per il ritorno alla posizione iniziale ->')
+print('Avvio del solver per il ritorno alla posizione iniziale...')
 id_pezzi, partenza, arrivo = impostazione_x_soluzione(stato_rimescolato)
 risultato_z3 = soluzione_z3(id_pezzi, partenza, arrivo, t_max=len(cronologia))
 if risultato_z3:

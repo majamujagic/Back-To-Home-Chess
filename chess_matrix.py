@@ -18,7 +18,7 @@ def tupla_stringa(r: int, c: int) -> str:
     row_char = str(8-r)
     return f"{col_char}{row_char}"
 
-# Ausiliaria 
+# Ausiliaria - vincolo dei bordi 
 def validità_mosse(r: int, c: int) -> bool:
     return (0 <= c < 8) and (0 <= r < 8)
 
