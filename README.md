@@ -8,7 +8,7 @@ Progetto di Mujagic Maja
 ## Obiettivo del progetto
 
 L'obiettivo centrale del progetto è applicare la logica proposizionale e la soddisfacibilità (SAT) per risolvere un problema di pianificazione e ricerca del percorso.
-Per fare ciò ci avvaliamo del solver Z3 come motore di ragionamento logico, traducendo il problema nei seguenti concetti:
+Per fare ciò ci avvaliamo del solver Z3, traducendo il problema nei seguenti concetti:
 
 * **Stato:** La disposizione dei pezzi sulla scacchiera in un dato istante $T$.
 * **Transizione:** Una transizione corrisponde al movimento legale di un pezzo secondo le regole geometriche implementate nel progetto.
