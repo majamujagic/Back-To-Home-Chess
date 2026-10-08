@@ -1,6 +1,6 @@
 # Back To Home Chess
 
-Questo progetto prende una scacchiera con un numero limitato di pezzi, li mescola mediante mosse casuali e poi usa Z3 per verificare se esiste una sequenza di spostamenti che riporti ogni pezzo alla sua posizione originaria senza collisioni.
+Questo progetto prende una scacchiera con un numero limitato di pezzi, li mescola tramite mosse casuali e poi usa Z3 per verificare se esiste una sequenza di spostamenti che riporti ogni pezzo alla sua posizione originaria senza collisioni.
 Il programma gestisce le regole di movimento dei vari pezzi, evita le collisioni lungo le strade e mostra l'intero processo visivamente tramite un'animazione grafica con Matplotlib.
 
 Progetto di Mujagic Maja
@@ -51,17 +51,8 @@ Il progetto è strutturato in diversi file nella cartella principale:
 └── README.md          # Documentazione del progetto
 ```
 
-## Istruzioni e Installazione
-### Librerie utilizzate:
+## Librerie utilizzate:
 * **Z3-solver**: Motore logico per la risoluzione dei problemi di soddisfacibilità (SMT/SAT).
 * **Matplotlib**: Per la generazione della grafica e delle animazioni della scacchiera.
 * **NumPy**: Per la gestione della matrice della scacchiera.
-### Installazione
-Assicurasi di avere Python installato sul computer. Dopodiché aprire il terminale all'interno della cartella del progetto e installare le librerie necessarie con il comando:
-```bash
-pip install z3-solver matplotlib numpy
-```
-Dopodichè puoi avviare il programma eseguendo lo script principale: 
-```bash
-python main.py
-```
+
