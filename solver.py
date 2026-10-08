@@ -43,7 +43,6 @@ def impostazione_x_soluzione(stato_finale_z):
     return id_pezzi, partenza, arrivo
 
 # Creazione di variabili booleane per ogni pedina, tempo e posizione
-
 def variabili_bool(id_pezzi, T):
     x = {}
     for identificatore, _ in id_pezzi:
@@ -54,7 +53,7 @@ def variabili_bool(id_pezzi, T):
                     x[(identificatore, t, r, c)] = Bool(nome)
     return x
 
-# VINCOLI
+# VINCOLI:
 
 def almeno_una_etichetta(solver, x, id_pezzi, T): 
     for identificatore, _ in id_pezzi:
@@ -75,7 +74,6 @@ def massimo_una_etichetta(solver, x, id_pezzi, T):
                     r2, c2 = caselle[j]
                     solver.add(Or(Not(x[(identificatore, t, r1, c1)]), Not(x[(identificatore, t, r2, c2)])))
 
-
 def vincolo_inizio_fine(solver, x, id_pezzi, partenza, arrivo,T):
     for identificatore, _ in id_pezzi:
         r_init, c_init = partenza[identificatore]
@@ -91,12 +89,12 @@ def freezing_pezzi(solver,x,id_pezzi,partenza,arrivo,T):
         for t in range(T + 1):
             solver.add(x[(identificatore, t, r, c)])
 
-def vincolo_non_collisione(solver, x, id_pezzi, T):
+def vincolo_di_non_convivenza(solver, x, id_pezzi, T):
     for t in range(T + 1):
         for r in range(8):
             for c in range(8):
-                for i in range(len(id_pezzi)):
-                    for j in range(i + 1, len(id_pezzi)):
+                for i in range(8):
+                    for j in range(i + 1, 8):
                         pezzo_1 = id_pezzi[i][0]
                         pezzo_2 = id_pezzi[j][0]
                         solver.add(Or(Not(x[(pezzo_1, t, r, c)]),Not(x[(pezzo_2, t, r, c)])))
@@ -106,34 +104,35 @@ def vincoli_mosse(solver, x, id_pezzi, partenza, arrivo, T):
         for identificatore, tipo_pezzo in id_pezzi:
             if partenza[identificatore] == arrivo[identificatore]:
                 continue
-            condizioni_mossa = []
+            condizioni_mossa = [] # Lista delle possibili mosse per il pezzo identificato al tempo t
             for r_val in range(8):
                 for c_val in range(8):
                     posizione_corrente = x[(identificatore, t, r_val, c_val)]
                     posizione_successiva = x[(identificatore, t + 1, r_val, c_val)]
-                    condizioni_mossa.append(And(posizione_corrente, posizione_successiva))
-                    mosse = mosse_pedine(tipo_pezzo, r_val, c_val)
+                    condizioni_mossa.append(And(posizione_corrente,posizione_successiva))
+                    # ^ Se il pezzo si trova in (r_val, c_val) al tempo t, allora può rimanere fermo al tempo t+1 grazie al freezing_pezzi
+                    mosse = mosse_pedine(tipo_pezzo,r_val,c_val) # Oppure può effettuare una mossa legale
                     for nr, nc in mosse:
-                        celle_intermedie = intersezioni((r_val, c_val),(nr, nc))
+                        celle_intermedie = intersezioni((r_val, c_val),(nr, nc)) 
+                        # ^ Calcola le celle intermedie tra la posizione corrente e quella successiva
                         condizioni_celle_libere = []
-                        for ir, ic in celle_intermedie:
+                        for ir, ic in celle_intermedie: # Andiamo a verificare che le celle intermedie siano libere
                             condizioni_altri_pezzi = []
                             for altro_pezzo, _ in id_pezzi:
                                 if altro_pezzo == identificatore:
                                     continue
-                                condizioni_altri_pezzi.append(Not(x[(altro_pezzo, t, ir, ic)]))
+                                condizioni_altri_pezzi.append(Not(x[(altro_pezzo, t, ir, ic)])) 
                             if condizioni_altri_pezzi:
-                                condizioni_celle_libere.append(And(condizioni_altri_pezzi))
-                        posizione_successiva = x[(identificatore, t+1, nr, nc)]
+                                condizioni_celle_libere.append(And(condizioni_altri_pezzi)) 
+                                # ^ Sostanzialemtne per ogni cella intermedia (ir, ic) nessun altro pezzo può trovarsi in quella cella al tempo t
+                        posizione_successiva = x[(identificatore, t + 1, nr, nc)]
                         if condizioni_celle_libere:
-                            condizioni_mossa.append(
-                                And(posizione_corrente, posizione_successiva, And(*condizioni_celle_libere)))
+                            condizioni_mossa.append(And(posizione_corrente,posizione_successiva,And(*condizioni_celle_libere)))
                         else:
-                            condizioni_mossa.append(
-                                And(posizione_corrente, posizione_successiva))
-            solver.add(Or(condizioni_mossa))
+                            condizioni_mossa.append(And(posizione_corrente,posizione_successiva))
+            solver.add(Or(condizioni_mossa)) # Per ogni pezzo al tempo t, almeno una delle condizioni deve essere vera
 
-def estrai_percorso_dal_modello(modello, x, id_pezzi, T):
+def estrai_percorso_dal_modello(modello, x, id_pezzi, T): 
     risultato_passi = {}
     for identificatore, _ in id_pezzi:
         percorso_pezzo = []
@@ -143,15 +142,15 @@ def estrai_percorso_dal_modello(modello, x, id_pezzi, T):
                 for c in range(8):
                     variabile = x[(identificatore, t, r, c)]
                     valore = modello.evaluate(variabile, model_completion=True)
-                    if is_true(valore):
+                    # model_completion: se la variabile non è assegnata, assume un valore di default permettondo al solver di valutare la fomrula in ogni caso
+                    if is_true(valore): # verifica se a quel valore è assegnato True 
                         posizione_trovata = (r, c)
-                        break
+                        break # Interrompe il ciclo 
                 if posizione_trovata is not None:
                     break
             percorso_pezzo.append(posizione_trovata)
         risultato_passi[identificatore] = percorso_pezzo
     return risultato_passi
-
 
 def soluzione_z3(id_pezzi, partenza, arrivo, t_max=10):
     for T in range(1, t_max + 1):
@@ -162,7 +161,7 @@ def soluzione_z3(id_pezzi, partenza, arrivo, t_max=10):
         massimo_una_etichetta(solver, x, id_pezzi, T)
         vincolo_inizio_fine(solver, x, id_pezzi, partenza, arrivo, T)
         freezing_pezzi(solver, x, id_pezzi, partenza, arrivo, T)
-        vincolo_non_collisione(solver, x, id_pezzi, T)
+        vincolo_di_non_convivenza(solver, x, id_pezzi, T)
         vincoli_mosse(solver, x, id_pezzi, partenza, arrivo, T)
         if solver.check() == sat:
             print(f'Soluzione trovata con successo in T = {T} passi!')
